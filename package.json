@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "typescript": "^4.0.5",
+    "ynab": "^1.20.0"
+  }
+}
