@@ -1,6 +1,6 @@
 import * as ynab from "ynab";
 
-import {token} from "./account-token";
+import {token} from "./account-token"
 
 async function syncWithRealAccounts() {
     const api = new ynab.API(token);
@@ -29,7 +29,7 @@ async function syncWithRealAccounts() {
         delta -= amount;
         return {
             account_id: a.id,
-            date: "2020-11-09",
+            date: "2020-11-12",
             amount,
             payee_name: "Market updates",
             // cleared: "cleared",
