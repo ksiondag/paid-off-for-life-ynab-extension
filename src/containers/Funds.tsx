@@ -32,7 +32,7 @@ export default function Funds(props: React.PropsWithChildren<RouterAppProps>) {
                 <thead>
                     <tr>
                         <th>Fund Name</th>
-                        <th>Balance</th>
+                        <th>Balance {funds.length > 0 ? `(${funds.reduce((prev, {balance}) => prev + balance, 0)/1000})`: null}</th>
                         {/* <th>
                             <ButtonToolbar>
                                 <Button onClick={() => setAddFund(true)}>Add</Button>
@@ -49,7 +49,7 @@ export default function Funds(props: React.PropsWithChildren<RouterAppProps>) {
                         funds.map(({ id, name, balance }) => {
                             return <tr key={id}>
                                 <td>{name}</td>
-                                <td>{balance}</td>
+                                <td>{balance/1000}</td>
                                 {/* <td>
                                     <ButtonToolbar>
                                         <Button bsStyle="danger" onClick={() => deleteFund(id)}>Delete</Button>
