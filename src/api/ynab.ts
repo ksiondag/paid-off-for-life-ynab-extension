@@ -54,7 +54,7 @@ interface Account {
 };
 export const poflAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
-    const paidOffForLifeAccounts = mainAccounts.data.accounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life`);
+    const paidOffForLifeAccounts = mainAccounts.data.accounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life` || a.name === `Index Budgeted`);
     return paidOffForLifeAccounts;
 };
 

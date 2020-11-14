@@ -25,7 +25,8 @@ export default function Funds(props: React.PropsWithChildren<RouterAppProps>) {
         setFunds(await ynab.poflAccounts());
         const budgetAccounts = await ynab.budgetAccounts();
 
-        setSuperFluousFunds(budgetAccounts.reduce((prev, a) => prev + a.balance, 0) - 2500*1000 - 1500*1000)
+        // TODO: look at upcoming transactions and last month's direct bank transactions to come up with a buffer
+        setSuperFluousFunds(budgetAccounts.reduce((prev, a) => prev + a.balance, 0) - 2500*1000 - 2000*1000)
     };
 
     return (
