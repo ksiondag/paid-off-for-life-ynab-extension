@@ -7,9 +7,7 @@ import Home from "./containers/Home";
 import Login from "./containers/Login";
 import NotFound from "./containers/NotFound";
 
-import { AppProps } from "./interfaces";
-
-export default function Routes({ appProps }: { appProps: AppProps }) {
+export default function Routes<T>({ appProps }: { appProps: T }) {
     return (
         <Switch>
             <AppliedRoute path="/" exact component={Home} appProps={appProps} />

@@ -17,7 +17,8 @@ export const verify = (): boolean => {
     return !!token;
 };
 
-const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
+// TODO: don't export this later
+export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
     const localBudgets = localStorage.getItem(`budgets`)
 
     if (!!localBudgets) {
@@ -29,7 +30,8 @@ const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
     return budgets;
 };
 
-const getAccounts = async (budgetId: string): Promise<ynab.AccountsResponse> => {
+// TODO: don't export this later
+export const getAccounts = async (budgetId: string): Promise<ynab.AccountsResponse> => {
     const localAccounts = localStorage.getItem(`accounts:${budgetId}`)
 
     if (!!localAccounts) {
@@ -62,7 +64,6 @@ export const budgetAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
     return mainAccounts.data.accounts.filter((a) => a.on_budget && (a.type === ynab.Account.TypeEnum.CreditCard) || a.name === "Chase Checking");
 };
-
 
 // TODO: Break this script up and make it an interactive FE setup, add the updates to the
 export const syncWithRealAccounts = async () => {

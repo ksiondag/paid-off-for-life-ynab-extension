@@ -2,20 +2,16 @@ import * as React from "react";
 
 import { Table, ButtonToolbar, Button, FormControl } from "react-bootstrap";
 
-import { RouterAppProps } from "../interfaces";
-
-import AddFund from "./funds/AddFund";
+import SyncModal from "./SyncModal";
 
 import "./Funds.css";
 import * as ynab from "../api/ynab";
 
-interface Fund {
-    id: number;
-}
-
-export default function Funds(props: React.PropsWithChildren<RouterAppProps>) {
+export default function Funds() {
     const [funds, setFunds] = React.useState([]);
     const [superfluousFunds, setSuperFluousFunds] = React.useState(0);
+    const [syncInProgress, setSyncInProgress] = React.useState(false);
+
 
     React.useEffect(() => {
         loadFunds();
@@ -26,11 +22,18 @@ export default function Funds(props: React.PropsWithChildren<RouterAppProps>) {
         const budgetAccounts = await ynab.budgetAccounts();
 
         // TODO: look at upcoming transactions and last month's direct bank transactions to come up with a buffer
+        // Come up with rules for the different accounts
         setSuperFluousFunds(budgetAccounts.reduce((prev, a) => prev + a.balance, 0) - 2500*1000 - 2000*1000)
     };
 
     return (
         <div className="Funds">
+            <ButtonToolbar>
+                <Button onClick={() => setSyncInProgress(true)}>Sync</Button>
+            </ButtonToolbar>
+            {syncInProgress ?
+                <SyncModal setSyncInProgress={setSyncInProgress} />
+            : null}
             <Table>
                 <tr key="Superfluous funds">
                     <td>Superfluous funds</td>

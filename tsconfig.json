@@ -9,7 +9,8 @@
         "jsx": "react",
         "esModuleInterop": true,
         "types": [
-            "jest"
+            "jest",
+            "webpack-env"
         ],
         "typeRoots": [
             "./src/types",
