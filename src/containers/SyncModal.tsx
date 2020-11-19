@@ -13,6 +13,7 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
     const [assets, setAssets] = React.useState<Array<ynab.Account>>([]);
     const [index, setIndex] = React.useState(0);
     const [balance, setBalance] = React.useState(0);
+    const [transactions, setTransactions] = React.useState<Array<ynab.TransactionDetail>>([]);
 
     const handleCancel = () => props.setSyncInProgress(false);
 
@@ -28,8 +29,21 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
         setBalance(accounts[index].balance);
     };
 
-    const constructTransaction = async (i: number) => {
-        i += 1
+    const constructTransaction = async (a: ynab.Account, i: number) => {
+        if (balance !== a.balance) {
+            const transaction: ynab.TransactionDetail = {
+                account_id: a.id,
+                // TODO: do not hardcode date
+                date: "2011-11-18",
+                amount: balance - a.balance,
+                payee_name: "Market updates",
+                cleared: ynab.TransactionDetail.ClearedEnum.Cleared,
+            };
+            transactions.push(transaction);
+            setTransactions(transactions);
+            console.log(transactions);
+        }
+        i += 1;
         if (i >= assets.length) {
             return handleCancel();
         } 
@@ -72,10 +86,10 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
                         <Button onClick={handleCancel}>
                             Cancel
                         </Button>
-                        <Button onClick={() => constructTransaction(i)}>
+                        <Button onClick={() => {setBalance(a.balance); constructTransaction(a, i);}}>
                             Skip
                         </Button>
-                        <Button onClick={handleCancel}>
+                        <Button onClick={() => constructTransaction(a, i)}>
                             Save and Continue
                         </Button>
                     </Modal.Footer>
