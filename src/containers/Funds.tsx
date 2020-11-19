@@ -35,17 +35,21 @@ export default function Funds() {
                 <SyncModal setSyncInProgress={setSyncInProgress} />
             : null}
             <Table>
-                <tr key="Superfluous funds">
-                    <td>Superfluous funds</td>
-                    <td style={{textAlign: "right"}}>${(superfluousFunds/1000).toLocaleString('en', {minimumFractionDigits: 2})}</td>
-                </tr>
+                <tbody>
+                    <tr key="Superfluous funds">
+                        <td>Superfluous funds</td>
+                        <td style={{textAlign: "right"}}>${(superfluousFunds/1000).toLocaleString('en', {minimumFractionDigits: 2})}</td>
+                    </tr>
+                </tbody>
             </Table>
             <Table>
                 <thead>
-                    <tr>
+                    <tr key="Funds header">
                         <th>Fund Name</th>
                         <th style={{textAlign: "right"}}>Balance {funds.length > 0 ? `($${(funds.reduce((prev, {balance}) => prev + balance, 0)/1000).toLocaleString('en', {minimumFractionDigits: 2})})`: null}</th>
                     </tr>
+                </thead>
+                <tbody>
                     {
                         funds.map(({ id, name, balance }) => {
                             return <tr key={id}>
@@ -54,7 +58,7 @@ export default function Funds() {
                             </tr>
                         })
                     }
-                </thead>
+                </tbody>
             </Table>
         </div>
     );
