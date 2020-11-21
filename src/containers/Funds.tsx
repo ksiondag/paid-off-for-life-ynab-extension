@@ -29,7 +29,8 @@ export default function Funds() {
     return (
         <div className="Funds">
             <ButtonToolbar>
-                <Button onClick={() => setSyncInProgress(true)}>Sync</Button>
+                <Button onClick={() => setSyncInProgress(true)}>Update</Button>
+                <Button onClick={() => ynab.syncWithRealAccounts()}>Sync</Button>
             </ButtonToolbar>
             {syncInProgress ?
                 <SyncModal setSyncInProgress={setSyncInProgress} />

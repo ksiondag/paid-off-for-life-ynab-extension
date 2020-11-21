@@ -3,7 +3,7 @@ import * as ynab from "ynab";
 
 import { Button, FormControl, Modal, Table } from "react-bootstrap";
 
-import {getBudgets, getAccounts} from "../api/ynab";
+import * as api from "../api/ynab";
 
 interface SyncProps {
     setSyncInProgress: React.Dispatch<React.SetStateAction<boolean>>
@@ -13,39 +13,43 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
     const [assets, setAssets] = React.useState<Array<ynab.Account>>([]);
     const [index, setIndex] = React.useState(0);
     const [balance, setBalance] = React.useState(0);
-    const [transactions, setTransactions] = React.useState<Array<ynab.TransactionDetail>>([]);
-
-    const handleCancel = () => props.setSyncInProgress(false);
-
+    const [transactions, setTransactions] = React.useState<Array<Omit<ynab.SaveTransaction, "date">>>([]);
+    
     React.useEffect(() => {
         loadAssets();
     }, []);
 
-    const loadAssets = async () => {
-        const budgets = await getBudgets();
+    const handleCancel = () => props.setSyncInProgress(false);
+    const handleSubmit = async () => {
+        const budgets = await api.getBudgets();
         const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
-        const accounts = (await getAccounts(mainBudget.id)).data.accounts;
+        await api.createTransactions(mainBudget.id, {transactions});
+        await api.syncWithRealAccounts();
+        props.setSyncInProgress(false);
+    };
+
+    const loadAssets = async () => {
+        const budgets = await api.getBudgets();
+        const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
+        const accounts = (await api.getAccounts(mainBudget.id)).data.accounts;
         setAssets(accounts);
         setBalance(accounts[index].balance);
     };
 
     const constructTransaction = async (a: ynab.Account, i: number) => {
         if (balance !== a.balance) {
-            const transaction: ynab.TransactionDetail = {
+            const transaction: Omit<ynab.SaveTransaction, "date"> = {
                 account_id: a.id,
-                // TODO: do not hardcode date
-                date: "2011-11-18",
                 amount: balance - a.balance,
                 payee_name: "Market updates",
-                cleared: ynab.TransactionDetail.ClearedEnum.Cleared,
+                // cleared: ynab.TransactionDetail.ClearedEnum.Cleared,
             };
             transactions.push(transaction);
             setTransactions(transactions);
-            console.log(transactions);
         }
         i += 1;
         if (i >= assets.length) {
-            return handleCancel();
+            return handleSubmit();
         } 
         setIndex(i);
         setBalance(assets[i].balance);
@@ -62,7 +66,9 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
             {assets.length > 0 ?
                 assets.map((a, i) => <Modal key={i} show={i === index} onHide={handleCancel}>
                     <Modal.Header closeButton>
-                        <Modal.Title>{a.name} ({i + 1} of {assets.length})</Modal.Title>
+                        <Modal.Title>
+                            <a href={a.note}>{a.name} ({i + 1} of {assets.length})</a>
+                        </Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
                         <Table>
@@ -85,9 +91,6 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
                     <Modal.Footer>
                         <Button onClick={handleCancel}>
                             Cancel
-                        </Button>
-                        <Button onClick={() => {setBalance(a.balance); constructTransaction(a, i);}}>
-                            Skip
                         </Button>
                         <Button onClick={() => constructTransaction(a, i)}>
                             Save and Continue
