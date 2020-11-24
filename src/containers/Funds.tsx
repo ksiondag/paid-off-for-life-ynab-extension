@@ -8,7 +8,7 @@ import "./Funds.css";
 import * as ynab from "../api/ynab";
 
 export default function Funds() {
-    const [funds, setFunds] = React.useState([]);
+    const [funds, setFunds] = React.useState<Array<ynab.Account>>([]);
     const [superfluousFunds, setSuperFluousFunds] = React.useState(0);
     const [syncInProgress, setSyncInProgress] = React.useState(false);
 

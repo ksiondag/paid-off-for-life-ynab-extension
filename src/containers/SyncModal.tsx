@@ -22,16 +22,16 @@ export default function SyncModal(props: React.PropsWithChildren<SyncProps>) {
     const handleCancel = () => props.setSyncInProgress(false);
     const handleSubmit = async () => {
         const budgets = await api.getBudgets();
-        const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
-        await api.createTransactions(mainBudget.id, {transactions});
+        const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
+        await api.createTransactions(investmentBudget.id, {transactions});
         await api.syncWithRealAccounts();
         props.setSyncInProgress(false);
     };
 
     const loadAssets = async () => {
         const budgets = await api.getBudgets();
-        const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
-        const accounts = (await api.getAccounts(mainBudget.id)).data.accounts;
+        const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
+        const accounts = (await api.getAccounts(investmentBudget.id)).data.accounts;
         setAssets(accounts);
         setBalance(accounts[index].balance);
     };

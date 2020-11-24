@@ -2,6 +2,10 @@ import * as ynab from "ynab";
 
 let api: ynab.API;
 
+export interface Account extends ynab.Account {
+
+}
+
 export const login = async ({token}: { token: string }) => {
     let ret: { success: boolean, message: string } = { success: true, message: `` };
     localStorage.setItem(`token`, token);
@@ -49,16 +53,17 @@ const getMainAccounts = async (): Promise<ynab.AccountsResponse> => {
     return getAccounts(mainBudget.id);
 };
 
-interface Account {
-    id: string;
-    name: string;
-    balance: number;
-};
 export const poflAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
     const paidOffForLifeAccounts = mainAccounts.data.accounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life` || a.name === `Index Budgeted`);
     return paidOffForLifeAccounts;
 };
+
+export const assetAccounts = async (): Promise<Array<Account>> => {
+    const budgets = await getBudgets();
+    const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
+    return (await getAccounts(mainBudget.id)).data.accounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset);
+}
 
 export const budgetAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
@@ -111,4 +116,13 @@ export const syncWithRealAccounts = async () => {
     transactions[0].amount += delta;
 
     createTransactions(mainBudget.id, {transactions});
+};
+
+export const toString = (balance: number): string => {
+    return (balance/1000).toLocaleString(undefined, {minimumFractionDigits: 2});
+};
+
+export const toNumber = (balance: string): number => {
+    // TODO: needs to be area agnostic (use built-in thing to find character)
+    return Number(balance.replace(/,/g, ``).replace(/\./g, ``)) * 10;
 };

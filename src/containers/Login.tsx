@@ -2,10 +2,9 @@ import * as React from "react";
 import { Button, FormGroup, FormControl, ControlLabel } from "react-bootstrap";
 import "./Login.css";
 import * as ynab from "../api/ynab";
+import { AppProps } from "../interfaces";
 
-import { RouterAppProps } from "../interfaces";
-
-export default function Login(props: React.PropsWithChildren<RouterAppProps>) {
+export default function Login(props: React.PropsWithChildren<AppProps>) {
     const [token, setToken] = React.useState("");
 
     function validateForm() {
