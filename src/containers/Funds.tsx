@@ -2,16 +2,12 @@ import * as React from "react";
 
 import { Table, ButtonToolbar, Button, FormControl } from "react-bootstrap";
 
-import SyncModal from "./SyncModal";
-
 import "./Funds.css";
 import * as ynab from "../api/ynab";
 
 export default function Funds() {
     const [funds, setFunds] = React.useState<Array<ynab.Account>>([]);
     const [superfluousFunds, setSuperFluousFunds] = React.useState(0);
-    const [syncInProgress, setSyncInProgress] = React.useState(false);
-
 
     React.useEffect(() => {
         loadFunds();
@@ -28,13 +24,6 @@ export default function Funds() {
 
     return (
         <div className="Funds">
-            <ButtonToolbar>
-                <Button onClick={() => setSyncInProgress(true)}>Update</Button>
-                <Button onClick={() => ynab.syncWithRealAccounts()}>Sync</Button>
-            </ButtonToolbar>
-            {syncInProgress ?
-                <SyncModal setSyncInProgress={setSyncInProgress} />
-            : null}
             <Table>
                 <tbody>
                     <tr key="Superfluous funds">

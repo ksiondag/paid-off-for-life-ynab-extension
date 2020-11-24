@@ -6,6 +6,10 @@ export interface Account extends ynab.Account {
 
 }
 
+export interface SaveTransaction extends ynab.SaveTransaction {
+    
+}
+
 export const login = async ({token}: { token: string }) => {
     let ret: { success: boolean, message: string } = { success: true, message: `` };
     localStorage.setItem(`token`, token);

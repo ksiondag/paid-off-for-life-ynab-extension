@@ -26,6 +26,28 @@ export default function Assets() {
     const totalAssets = () => assets.reduce((prev, a) => prev + a.balance, 0);
     const currentTotal = () => totalChange() + totalAssets();
 
+    const constructTransaction = (a: ynab.Account, i: number): Omit<ynab.SaveTransaction, "date"> => {
+        if (changes[i] !== 0) {
+            const transaction: Omit<ynab.SaveTransaction, "date"> = {
+                account_id: a.id,
+                amount: changes[i],
+                payee_name: "Market updates",
+            };
+            return transaction;
+        }
+        return null;
+    };
+
+
+    const handleSubmit = async () => {
+        const transactions = assets.map(constructTransaction).filter((t) => t !== null);
+        const budgets = await ynab.getBudgets();
+        const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
+        await ynab.createTransactions(investmentBudget.id, {transactions});
+        await ynab.syncWithRealAccounts();
+        loadAssets();
+    };
+
 
     return (
         <div className="Assets">
@@ -35,9 +57,9 @@ export default function Assets() {
                         <th>Asset Name</th>
                         <th style={{textAlign: "right"}}>Balance ${ynab.toString(currentTotal())}</th>
                         <th style={{textAlign: "right"}}>
-                            {totalChange() > 0 ?
+                            {totalChange() !== 0 ?
                                 <>
-                                    {ynab.toString(totalChange())} ({(totalChange()/totalAssets() * 100).toLocaleString(undefined, {maximumFractionDigits: 2})}%)
+                                    ${ynab.toString(totalChange())} ({(totalChange()/totalAssets() * 100).toLocaleString(undefined, {maximumFractionDigits: 2})}%)
                                 </>
                             : <>Change (%)</>}
                         </th>
@@ -45,11 +67,13 @@ export default function Assets() {
                 </thead>
                 <tbody>
                     {
-                        assets.map(({ id, name, balance }, index) => {
+                        assets.map(({ id, name, balance, note }, index) => {
                             const change = changes[index];
                             const updatedBalance = balance + change;
                             return <tr key={id}>
-                                <td>{name}</td>
+                                <td>
+                                    <a href={note} target="_blank">{name}</a>
+                                </td>
                                 <td style={{textAlign: "right"}}>
                                     <form onSubmit={e => e.preventDefault()}>
                                         <FormControl style={{textAlign: "right"}}
@@ -68,7 +92,7 @@ export default function Assets() {
             </Table>
             { totalChange() !== 0 ? 
                 <ButtonToolbar>
-                    <Button onClick={() => null}>Update</Button>
+                    <Button onClick={() => handleSubmit()}>Update</Button>
                 </ButtonToolbar>
             : null}
         </div>
