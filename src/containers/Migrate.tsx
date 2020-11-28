@@ -32,7 +32,7 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
                 if (b.accounts) {
                     b.accounts = null;
                 } else {
-                    b.accounts = accounts.data.accounts;
+                    b.accounts = accounts;
                 }
             }
             return b;
@@ -47,8 +47,13 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
         }
     };
 
-    const migrate = () => {
+    const migrate = async () => {
         // First: create all the accounts in target budget that don't already exist
+        const accounts = await ynab.getAccounts(target.id);
+        const nameToAccount = {}
+        accounts.forEach(element => {
+            
+        });
     };
 
     return (

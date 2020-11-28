@@ -33,19 +33,19 @@ export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
     return budgets;
 };
 
-export const getAccounts = async (budgetId: string): Promise<ynab.AccountsResponse> => {
+export const getAccounts = async (budgetId: string): Promise<ynab.Account[]> => {
     const localAccounts = localStorage.getItem(`accounts:${budgetId}`)
 
     if (!!localAccounts) {
-        return JSON.parse(localAccounts) as ynab.AccountsResponse;
+        return JSON.parse(localAccounts) as ynab.Account[];
     }
 
-    const accounts = await api.accounts.getAccounts(budgetId);
+    const accounts = (await api.accounts.getAccounts(budgetId)).data.accounts;
     localStorage.setItem(`accounts:${budgetId}`, JSON.stringify(accounts));
     return accounts;
 };
 
-const getMainAccounts = async (): Promise<ynab.AccountsResponse> => {
+const getMainAccounts = async (): Promise<ynab.Account[]> => {
     const budgets = await getBudgets();
     // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
@@ -54,7 +54,7 @@ const getMainAccounts = async (): Promise<ynab.AccountsResponse> => {
 
 export const poflAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
-    const paidOffForLifeAccounts = mainAccounts.data.accounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life` || a.name === `Index Budgeted`);
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life` || a.name === `Index Budgeted`);
     return paidOffForLifeAccounts;
 };
 
@@ -62,12 +62,12 @@ export const assetAccounts = async (): Promise<Array<Account>> => {
     const budgets = await getBudgets();
     // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
-    return (await getAccounts(mainBudget.id)).data.accounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset);
+    return (await getAccounts(mainBudget.id)).filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset);
 }
 
 export const budgetAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
-    return mainAccounts.data.accounts.filter((a) => a.on_budget && (a.type === ynab.Account.TypeEnum.CreditCard) || a.name === "Chase Checking");
+    return mainAccounts.filter((a) => a.on_budget && (a.type === ynab.Account.TypeEnum.CreditCard) || a.name === "Chase Checking");
 };
 
 export const createTransactions = async (budegt_id: string, {transactions}: {transactions: Array<Omit<ynab.SaveTransaction, "date">>}) => {
@@ -91,9 +91,9 @@ export const syncWithRealAccounts = async () => {
     const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
     const investmentAccounts = await getAccounts(investmentBudget.id);
 
-    const paidOffForLifeAccounts = mainAccounts.data.accounts.filter((a) => !a.closed && (a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Paid Off for Life` || a.name === `Index Budgeted`));
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => !a.closed && (a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Paid Off for Life` || a.name === `Index Budgeted`));
     const paidOffForLifeTotal = paidOffForLifeAccounts.reduce((prev, a) => prev + a.balance, 0);
-    const investmentsTotal = investmentAccounts.data.accounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset).reduce((prev, a) => prev + a.balance, 0);
+    const investmentsTotal = investmentAccounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset).reduce((prev, a) => prev + a.balance, 0);
     let delta = investmentsTotal - paidOffForLifeTotal;
 
     if (delta === 0) {

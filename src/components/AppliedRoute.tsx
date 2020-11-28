@@ -3,7 +3,7 @@ import { Route } from "react-router-dom";
 
 import { AppliedRouteObj } from "../interfaces";
 
-export default function AppliedRoute<T>({ component: C, appProps, ...rest }: AppliedRouteObj<T>) {
+export default function AppliedRoute<T>({ component: C, appProps, ...rest }: AppliedRouteObj) {
     return (
         <Route {...rest} render={props => <C {...props} {...appProps} />} />
     );

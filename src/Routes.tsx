@@ -10,8 +10,9 @@ import Playback from "./containers/Playback";
 import Migrate from "./containers/Migrate";
 import NotFound from "./containers/NotFound";
 import Assets from "./containers/Assets";
+import { AppProps } from "./interfaces";
 
-export default function Routes<T>({ appProps }: { appProps: T }) {
+export default function Routes({ appProps }: { appProps: AppProps }) {
     return (
         <Switch>
             <AppliedRoute path="/" exact component={Home} appProps={appProps} />
