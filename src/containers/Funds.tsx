@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Table, ButtonToolbar, Button, FormControl } from "react-bootstrap";
+import { Table } from "react-bootstrap";
 
 import "./Funds.css";
 import * as ynab from "../api/ynab";

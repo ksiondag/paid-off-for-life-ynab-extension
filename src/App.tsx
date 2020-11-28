@@ -39,6 +39,9 @@ function App(props: React.PropsWithChildren<RouteComponentProps>) {
                     <LinkContainer to="/assets">
                         <NavItem>Assets</NavItem>
                     </LinkContainer>
+                    <LinkContainer to="/migrate">
+                        <NavItem>Migrate</NavItem>
+                    </LinkContainer>
                     <LinkContainer to="/playback">
                         <NavItem>Playback</NavItem>
                     </LinkContainer>

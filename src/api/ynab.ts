@@ -2,13 +2,9 @@ import * as ynab from "ynab";
 
 let api: ynab.API;
 
-export interface Account extends ynab.Account {
-
-}
-
-export interface SaveTransaction extends ynab.SaveTransaction {
-    
-}
+export type Account = ynab.Account;
+export type SaveTransaction = ynab.SaveTransaction;
+export type BudgetSummary = ynab.BudgetSummary;
 
 export const login = async ({token}: { token: string }) => {
     let ret: { success: boolean, message: string } = { success: true, message: `` };
@@ -25,7 +21,6 @@ export const verify = (): boolean => {
     return !!token;
 };
 
-// TODO: don't export this later
 export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
     const localBudgets = localStorage.getItem(`budgets`)
 
@@ -38,7 +33,6 @@ export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
     return budgets;
 };
 
-// TODO: don't export this later
 export const getAccounts = async (budgetId: string): Promise<ynab.AccountsResponse> => {
     const localAccounts = localStorage.getItem(`accounts:${budgetId}`)
 
@@ -53,6 +47,7 @@ export const getAccounts = async (budgetId: string): Promise<ynab.AccountsRespon
 
 const getMainAccounts = async (): Promise<ynab.AccountsResponse> => {
     const budgets = await getBudgets();
+    // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
     return getAccounts(mainBudget.id);
 };
@@ -65,6 +60,7 @@ export const poflAccounts = async (): Promise<Array<Account>> => {
 
 export const assetAccounts = async (): Promise<Array<Account>> => {
     const budgets = await getBudgets();
+    // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
     return (await getAccounts(mainBudget.id)).data.accounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset);
 }
@@ -83,13 +79,15 @@ export const createTransactions = async (budegt_id: string, {transactions}: {tra
     localStorage.removeItem(`accounts:${budegt_id}`);
 };
 
-// TODO: Break this script up and make it an interactive FE setup, add the updates to the
+// TODO: Break this script up and make it an interactive FE setup
 export const syncWithRealAccounts = async () => {
     const budgets = await getBudgets();
 
+    // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
     const mainAccounts = await getAccounts(mainBudget.id);
 
+    // TODO: no hardcoded budget or account names
     const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
     const investmentAccounts = await getAccounts(investmentBudget.id);
 
@@ -129,4 +127,16 @@ export const toString = (balance: number): string => {
 export const toNumber = (balance: string): number => {
     // TODO: needs to be area agnostic (use built-in thing to find character)
     return Number(balance.replace(/,/g, ``).replace(/\./g, ``)) * 10;
+};
+
+export const createAccount = async (budget_id: string, account_name: string) => {
+    const response = await api.accounts.createAccount(budget_id, {
+        account: {
+            name: account_name,
+            type: ynab.Account.TypeEnum.OtherAsset as ynab.SaveAccount.TypeEnum,
+            balance: 0,
+        },
+    });
+
+    return response.data.account;
 };
