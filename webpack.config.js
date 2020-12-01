@@ -32,6 +32,11 @@ module.exports = {
     new webpack.HotModuleReplacementPlugin()
   ],
   devServer: {
+    allowedHosts: [
+      '127.0.0.1',
+      '0.0.0.0',
+      'localhost',
+    ],
     contentBase: './dist',
     hot: true,
     historyApiFallback: true

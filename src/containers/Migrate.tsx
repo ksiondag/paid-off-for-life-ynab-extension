@@ -49,11 +49,20 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
 
     const migrate = async () => {
         // First: create all the accounts in target budget that don't already exist
-        const accounts = await ynab.getAccounts(target.id);
-        const nameToAccount = {}
-        accounts.forEach(element => {
-            
+        const targetAccounts = await ynab.getAccounts(target.id);
+        const nameToAccount: {[name: string]: ynab.Account} = {}
+        targetAccounts.forEach((a) => {
+            nameToAccount[a.name] = a;
         });
+
+        for (let a of accounts) {
+            const name = renames[a.name] || a.name;
+
+            if (!nameToAccount[name]) {
+                a = await ynab.createAccount(target.id, name);
+                nameToAccount[name] = a;
+            }
+        }
     };
 
     return (

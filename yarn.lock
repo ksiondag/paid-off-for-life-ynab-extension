@@ -8050,9 +8050,8 @@ yargs@^15.3.1:
     y18n "^4.0.0"
     yargs-parser "^18.1.2"
 
-ynab@^1.20.0:
+ynab@ksiondag/ynab-sdk-js#esm-build-bug-fix:
   version "1.20.0"
-  resolved "https://registry.yarnpkg.com/ynab/-/ynab-1.20.0.tgz#65a451b4644c4cbfe250237b364e237eb5ac4af8"
-  integrity sha512-agn2NhLGx/hXKLh5/Y8Ri45DZvyabXJCtJ9jTHOnaocr7XAL0R5jW7ZnKupUI9dIJy3vAXln5i+KDgjQ98ieqA==
+  resolved "https://codeload.github.com/ksiondag/ynab-sdk-js/tar.gz/f2bca66496d9073736b48889ce52aad6412aaf78"
   dependencies:
     portable-fetch "^3.0.0"
