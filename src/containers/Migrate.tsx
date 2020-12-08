@@ -8,7 +8,7 @@ import { Button, Checkbox, Dropdown, FormControl, Table } from "react-bootstrap"
 export default function Migrate(props: React.PropsWithChildren<AppProps>) {
     const [target, setTarget] = React.useState<ynab.BudgetSummary>(null);
     const [budgets, setBudgets] = React.useState<Array<ynab.BudgetSummary>>([]);
-    const [accounts, setAccounts] = React.useState<Array<ynab.Account>>([]);
+    const [accounts, setAccounts] = React.useState<{[budget_id: string]: Array<ynab.Account>}>({});
     const [renames, setRenames] = React.useState<{[id: string]: string}>({});
 
     React.useEffect(() => {
@@ -21,7 +21,7 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
     };
 
     const toggleTargetBudget = (budget: ynab.BudgetSummary) => {
-        budget.accounts?.forEach((a) => toggleAccount(a, true));
+        budget.accounts?.forEach((a) => toggleAccount(budget.id, a, true));
         setTarget(budget);
     };
 
@@ -39,11 +39,15 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
         }));
     };
 
-    const toggleAccount = (account: ynab.Account, checked: boolean) => {
+    const toggleAccount = (budget_id: string, account: ynab.Account, checked: boolean) => {
+        const accts = accounts[budget_id] ?? [];
         if (checked) {
-            setAccounts(accounts.filter((a) => a.id !== account.id));
+            setAccounts({
+                ...accounts,
+                [budget_id]: accts.filter((a) => a.id !== account.id),
+            });
         } else {
-            setAccounts([...accounts, account]);
+            setAccounts({...accounts, [budget_id]: [...accts, account]});
         }
     };
 
@@ -55,12 +59,15 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
             nameToAccount[a.name] = a;
         });
 
-        for (let a of accounts) {
-            const name = renames[a.name] || a.name;
+        for (const [_, accts] of Object.entries(accounts)) {
+            for (let a of accts) {
+                const name = renames[a.name] || a.name;
 
-            if (!nameToAccount[name]) {
-                a = await ynab.createAccount(target.id, name);
-                nameToAccount[name] = a;
+                if (!nameToAccount[name]) {
+                    a = await ynab.createAccount(target.id, name);
+                    nameToAccount[name] = a;
+                }
+                nameToAccount[a.id] = a;
             }
         }
     };
@@ -122,8 +129,8 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
                                             <tbody>
                                                 {
                                                     b.accounts.map((a) => {
-                                                        const checked = !!accounts.find((tmp) => a.id === tmp.id);
-                                                        return <tr key={a.id} onClick={() => toggleAccount(a, checked)}>
+                                                        const checked = Object.values(accounts).some((accts) => accts.some((tmp) => a.id === tmp.id));
+                                                        return <tr key={a.id} onClick={() => toggleAccount(b.id, a, checked)}>
                                                             <td>
                                                                 <Checkbox readOnly checked={checked}/>
                                                             </td>
@@ -141,31 +148,35 @@ export default function Migrate(props: React.PropsWithChildren<AppProps>) {
                 </tbody>
             </Table>
 
-            { accounts.length > 0 ? <div>
+            { Object.values(accounts).reduce((prev, accts) => accts.length + prev, 0) > 0 ? <div>
                 <div>
                     Further updates?
                 </div>
 
                 <Table>
                     <thead>
-                        <td>Original Name</td>
-                        <td>Destination Name (will be merged into account with identical name)</td>
+                        <tr>
+                            <td>Original Name</td>
+                            <td>Destination Name (will be merged into account with identical name)</td>
+                        </tr>
                     </thead>
                     <tbody>
                         {
-                            accounts.map((a) => {
-                                return <tr key={`taget-${a.id}`}>
-                                    <td>{a.name}</td>
-                                    <td>
-                                        <form onSubmit={e => e.preventDefault()}>
-                                            <FormControl
-                                                type="text"
-                                                value={renames[a.id] ?? a.name}
-                                                onChange={(ev) => setRenames({...renames, [a.id]: (ev.target as HTMLTextAreaElement).value})}
-                                            />
-                                        </form>
-                                    </td>
-                                </tr>
+                            Object.entries(accounts).map(([budget_id, accts]) => {
+                                return accts.map((a) => {
+                                    return <tr key={`taget-${a.id}`}>
+                                        <td>{a.name}</td>
+                                        <td>
+                                            <form onSubmit={e => e.preventDefault()}>
+                                                <FormControl
+                                                    type="text"
+                                                    value={renames[a.id] ?? a.name}
+                                                    onChange={(ev) => setRenames({...renames, [a.id]: (ev.target as HTMLTextAreaElement).value})}
+                                                />
+                                            </form>
+                                        </td>
+                                    </tr>
+                                });
                             })
                         }
                     </tbody>

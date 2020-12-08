@@ -70,13 +70,61 @@ export const budgetAccounts = async (): Promise<Array<Account>> => {
     return mainAccounts.filter((a) => a.on_budget && (a.type === ynab.Account.TypeEnum.CreditCard) || a.name === "Chase Checking");
 };
 
-export const createTransactions = async (budegt_id: string, {transactions}: {transactions: Array<Omit<ynab.SaveTransaction, "date">>}) => {
-    const now = new Date();
-    await api.transactions.createTransactions(budegt_id, {transactions: transactions.map((t) => ({
+export const getTransactions = async (budget_id:string, account_id: string): Promise<ynab.TransactionDetail[]> => {
+    const localTransactions = localStorage.getItem(`transactions:${budget_id}:${account_id}`)
+
+    if (!!localTransactions) {
+        return JSON.parse(localTransactions) as ynab.TransactionDetail[];
+    }
+
+    const transactions = (await api.transactions.getTransactionsByAccount(budget_id, account_id)).data.transactions;
+    localStorage.setItem(`transactions:${budget_id}:${account_id}`, JSON.stringify(transactions));
+    return transactions;
+};
+
+export const createTransactions = async (budget_id: string, {transactions}: {transactions: Array<Omit<ynab.SaveTransaction, "date"> | ynab.SaveTransaction>}) => {
+    await api.transactions.createTransactions(budget_id, {transactions: transactions.map((t) => ({
+        date: ynab.utils.getCurrentDateInISOFormat(),
         ...t,
-        date: `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`,
     }))});
-    localStorage.removeItem(`accounts:${budegt_id}`);
+    localStorage.removeItem(`accounts:${budget_id}`);
+};
+
+const getCategories = async (budget_id: string): Promise<ynab.CategoryGroupWithCategories[]> => {
+    const localCategories = localStorage.getItem(`categories:${budget_id}`)
+
+    if (!!localCategories) {
+        return JSON.parse(localCategories) as ynab.CategoryGroupWithCategories[];
+    }
+
+    const categories = (await api.categories.getCategories(budget_id)).data.category_groups;
+    localStorage.setItem(`categories:${budget_id}`, JSON.stringify(categories));
+    return categories;
+};
+
+const calculateSubtransactions = (amount: number, account: Account, categories: ynab.CategoryGroupWithCategories[]): ynab.SaveSubTransaction[] => {
+    const accountCategories = categories.flatMap((group) => group.categories.filter((category) => category.note?.includes(account.name)));
+    if (accountCategories.length === 0) {
+        return [];
+    }
+    const overflowCategory = accountCategories.find((c) => c.note?.includes(`Overflow`));
+    const categoryObj = overflowCategory ? {category_id: overflowCategory.id} : {};
+
+    const interest = 1 - account.balance / (account.balance + amount);
+    let delta = amount;
+    const subtransactions: ynab.SaveSubTransaction[] = [{
+        ...categoryObj,
+        amount: 0,
+    }, ...accountCategories.filter((c) => c.id !== overflowCategory.id && c.note?.includes(`Compound`)).map((c) => {
+        const amount = Math.round(c.balance * interest / 10) * 10;
+        delta -= amount;
+        return {
+            category_id: c.id,
+            amount,
+        };
+    })];
+    subtransactions[0].amount += delta;
+    return subtransactions.filter((s) => s.amount > 0);
 };
 
 // TODO: Break this script up and make it an interactive FE setup
@@ -101,21 +149,24 @@ export const syncWithRealAccounts = async () => {
     }
 
     const interest = 1 - paidOffForLifeTotal/investmentsTotal;
-
-    // TODO: Save lost money in 'Paid Off for Life' and 'Index Budgeted' and explicitly have paid off for life accounts make up for lost funds
-    const transactions = paidOffForLifeAccounts.map((a) => {
+    const categories = await getCategories(mainBudget.id);
+    const transactions = paidOffForLifeAccounts.map((a): Omit<ynab.SaveTransaction, "date"> => {
         const amount =  Math.round(a.balance * interest / 10) * 10;
         delta -= amount;
-        const now = new Date();
+        const subtransactions = calculateSubtransactions(amount, a, categories);
+        const subtransactionObj = subtransactions.length > 0 ? {subtransactions} : {};
         return {
             account_id: a.id,
             amount,
             payee_name: "Market updates",
-            // cleared: ynab.TransactionDetail.ClearedEnum.Cleared,
+            ...subtransactionObj,
         };
-    });
+    }).filter((t) => t.amount > 0);
 
     transactions[0].amount += delta;
+    if (transactions[0].subtransactions) {
+        transactions[0].subtransactions[0].amount += delta;
+    }
 
     createTransactions(mainBudget.id, {transactions});
 };
