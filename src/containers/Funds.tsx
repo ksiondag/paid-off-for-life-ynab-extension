@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Table } from "react-bootstrap";
+import { Button, ButtonToolbar, Table } from "react-bootstrap";
 
 import "./Funds.css";
 import * as ynab from "../api/ynab";
@@ -24,6 +24,10 @@ export default function Funds() {
 
     return (
         <div className="Funds">
+            <ButtonToolbar>
+                <Button onClick={() => ynab.syncWithRealAccounts()}>Sync with Assets</Button>
+            </ButtonToolbar>
+
             <Table>
                 <tbody>
                     <tr key="Superfluous funds">

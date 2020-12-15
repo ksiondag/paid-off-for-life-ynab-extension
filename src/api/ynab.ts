@@ -124,7 +124,7 @@ const calculateSubtransactions = (amount: number, account: Account, categories: 
         };
     })];
     subtransactions[0].amount += delta;
-    return subtransactions.filter((s) => s.amount > 0);
+    return subtransactions.filter((s) => s.amount !== 0);
 };
 
 // TODO: Break this script up and make it an interactive FE setup
@@ -161,7 +161,7 @@ export const syncWithRealAccounts = async () => {
             payee_name: "Market updates",
             ...subtransactionObj,
         };
-    }).filter((t) => t.amount > 0);
+    }).filter((t) => t.amount !== 0);
 
     transactions[0].amount += delta;
     if (transactions[0].subtransactions) {
