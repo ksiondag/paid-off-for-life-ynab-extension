@@ -6,7 +6,20 @@ export type Account = ynab.Account;
 export type SaveTransaction = ynab.SaveTransaction;
 export type BudgetSummary = ynab.BudgetSummary;
 
-export const login = async ({token}: { token: string }) => {
+const ONE_HOUR = 1000 * 60 * 60;
+
+const resetIfStale = () => {
+    const lastCache = localStorage.getItem(`lastCache`);
+
+    if (!lastCache || Date.now() - Number(lastCache) > ONE_HOUR) {
+        const token = localStorage.getItem(`token`);
+        localStorage.clear();
+        localStorage.setItem(`token`, token);
+        localStorage.setItem(`lastCache`, (Date.now()).toString())
+    }
+};
+
+export const login = async ({ token }: { token: string }) => {
     let ret: { success: boolean, message: string } = { success: true, message: `` };
     localStorage.setItem(`token`, token);
     api = new ynab.API(token);
@@ -22,6 +35,7 @@ export const verify = (): boolean => {
 };
 
 export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
+    resetIfStale();
     const localBudgets = localStorage.getItem(`budgets`)
 
     if (!!localBudgets) {
@@ -34,6 +48,7 @@ export const getBudgets = async (): Promise<ynab.BudgetSummaryResponse> => {
 };
 
 export const getAccounts = async (budgetId: string): Promise<ynab.Account[]> => {
+    resetIfStale();
     const localAccounts = localStorage.getItem(`accounts:${budgetId}`)
 
     if (!!localAccounts) {
@@ -70,7 +85,8 @@ export const budgetAccounts = async (): Promise<Array<Account>> => {
     return mainAccounts.filter((a) => a.on_budget && (a.type === ynab.Account.TypeEnum.CreditCard) || a.name === "Chase Checking");
 };
 
-export const getTransactions = async (budget_id:string, account_id: string): Promise<ynab.TransactionDetail[]> => {
+export const getTransactions = async (budget_id: string, account_id: string): Promise<ynab.TransactionDetail[]> => {
+    resetIfStale();
     const localTransactions = localStorage.getItem(`transactions:${budget_id}:${account_id}`)
 
     if (!!localTransactions) {
@@ -82,15 +98,18 @@ export const getTransactions = async (budget_id:string, account_id: string): Pro
     return transactions;
 };
 
-export const createTransactions = async (budget_id: string, {transactions}: {transactions: Array<Omit<ynab.SaveTransaction, "date"> | ynab.SaveTransaction>}) => {
-    await api.transactions.createTransactions(budget_id, {transactions: transactions.map((t) => ({
-        date: ynab.utils.getCurrentDateInISOFormat(),
-        ...t,
-    }))});
+export const createTransactions = async (budget_id: string, { transactions }: { transactions: Array<Omit<ynab.SaveTransaction, "date"> | ynab.SaveTransaction> }) => {
+    await api.transactions.createTransactions(budget_id, {
+        transactions: transactions.map((t) => ({
+            date: ynab.utils.getCurrentDateInISOFormat(),
+            ...t,
+        }))
+    });
     localStorage.removeItem(`accounts:${budget_id}`);
 };
 
 const getCategories = async (budget_id: string): Promise<ynab.CategoryGroupWithCategories[]> => {
+    resetIfStale();
     const localCategories = localStorage.getItem(`categories:${budget_id}`)
 
     if (!!localCategories) {
@@ -108,7 +127,7 @@ const calculateSubtransactions = (amount: number, account: Account, categories: 
         return [];
     }
     const overflowCategory = accountCategories.find((c) => c.note?.includes(`Overflow`));
-    const categoryObj = overflowCategory ? {category_id: overflowCategory.id} : {};
+    const categoryObj = overflowCategory ? { category_id: overflowCategory.id } : {};
 
     const interest = 1 - account.balance / (account.balance + amount);
     let delta = amount;
@@ -148,13 +167,13 @@ export const syncWithRealAccounts = async () => {
         return;
     }
 
-    const interest = 1 - paidOffForLifeTotal/investmentsTotal;
+    const interest = 1 - paidOffForLifeTotal / investmentsTotal;
     const categories = await getCategories(mainBudget.id);
     const transactions = paidOffForLifeAccounts.map((a): Omit<ynab.SaveTransaction, "date"> => {
-        const amount =  Math.round(a.balance * interest / 10) * 10;
+        const amount = Math.round(a.balance * interest / 10) * 10;
         delta -= amount;
         const subtransactions = calculateSubtransactions(amount, a, categories);
-        const subtransactionObj = subtransactions.length > 0 ? {subtransactions} : {};
+        const subtransactionObj = subtransactions.length > 0 ? { subtransactions } : {};
         return {
             account_id: a.id,
             amount,
@@ -168,11 +187,11 @@ export const syncWithRealAccounts = async () => {
         transactions[0].subtransactions[0].amount += delta;
     }
 
-    createTransactions(mainBudget.id, {transactions});
+    createTransactions(mainBudget.id, { transactions });
 };
 
 export const toString = (balance: number): string => {
-    return (balance/1000).toLocaleString(undefined, {minimumFractionDigits: 2});
+    return (balance / 1000).toLocaleString(undefined, { minimumFractionDigits: 2 });
 };
 
 export const toNumber = (balance: string): number => {
