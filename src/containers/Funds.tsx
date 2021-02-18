@@ -72,7 +72,7 @@ export default function Funds() {
                 <thead>
                     <tr key="Funds header">
                         <th>Fund Name</th>
-                        <th>Monthly Withdrawal</th>
+                        <th style={{ textAlign: "right" }}>Monthly Withdrawal</th>
                         <th style={{ textAlign: "right" }}>Balance {funds.length > 0 ? `($${(funds.reduce((prev, { balance }) => prev + balance, 0) / 1000).toLocaleString('en', { minimumFractionDigits: 2 })})` : null}</th>
                     </tr>
                 </thead>
@@ -81,7 +81,7 @@ export default function Funds() {
                         funds.map(({ id, name, balance, note }) => {
                             return <tr key={id}>
                                 <td>{name}</td>
-                                <td>{withdrawalAmount(balance, note)}</td>
+                                <td style={{ textAlign: "right" }}>${withdrawalAmount(balance, note)}</td>
                                 <td style={{ textAlign: "right" }}>${(balance / 1000).toLocaleString('en', { minimumFractionDigits: 2 })}</td>
                             </tr>
                         })
