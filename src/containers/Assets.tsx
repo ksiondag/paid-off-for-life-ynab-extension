@@ -38,16 +38,14 @@ export default function Assets() {
         return null;
     };
 
-
     const handleSubmit = async () => {
         const transactions = assets.map(constructTransaction).filter((t) => t !== null);
         const budgets = await ynab.getBudgets();
         const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
-        await ynab.createTransactions(investmentBudget.id, {transactions});
+        await ynab.createTransactions(investmentBudget.id, { transactions });
         await ynab.syncWithRealAccounts();
         loadAssets();
     };
-
 
     return (
         <div className="Assets">
@@ -55,13 +53,13 @@ export default function Assets() {
                 <thead>
                     <tr key="Assets header">
                         <th>Asset Name</th>
-                        <th style={{textAlign: "right"}}>Balance ${ynab.toString(currentTotal())}</th>
-                        <th style={{textAlign: "right"}}>
+                        <th style={{ textAlign: "right" }}>Balance ${ynab.toString(currentTotal())}</th>
+                        <th style={{ textAlign: "right" }}>
                             {totalChange() !== 0 ?
                                 <>
-                                    ${ynab.toString(totalChange())} ({(totalChange()/totalAssets() * 100).toLocaleString(undefined, {maximumFractionDigits: 2})}%)
+                                    ${ynab.toString(totalChange())} ({(totalChange() / totalAssets() * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%)
                                 </>
-                            : <>Change (%)</>}
+                                : <>Change (%)</>}
                         </th>
                     </tr>
                 </thead>
@@ -74,9 +72,9 @@ export default function Assets() {
                                 <td>
                                     <a href={note} target="_blank">{name}</a>
                                 </td>
-                                <td style={{textAlign: "right"}}>
+                                <td style={{ textAlign: "right" }}>
                                     <form onSubmit={e => e.preventDefault()}>
-                                        <FormControl style={{textAlign: "right"}}
+                                        <FormControl style={{ textAlign: "right" }}
                                             type="text"
                                             value={ynab.toString(updatedBalance)}
                                             placeholder="0.00"
@@ -84,17 +82,17 @@ export default function Assets() {
                                         />
                                     </form>
                                 </td>
-                                <td style={{textAlign: "right"}}>${ynab.toString(change)} ({(change/balance *100).toLocaleString(undefined, {maximumFractionDigits: 2})}%)</td>
+                                <td style={{ textAlign: "right" }}>${ynab.toString(change)} ({(change / balance * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%)</td>
                             </tr>
                         })
                     }
                 </tbody>
             </Table>
-            { totalChange() !== 0 ? 
+            { totalChange() !== 0 ?
                 <ButtonToolbar>
                     <Button onClick={() => handleSubmit()}>Update</Button>
                 </ButtonToolbar>
-            : null}
+                : null}
         </div>
     );
 }
