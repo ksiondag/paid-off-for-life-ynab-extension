@@ -1,4 +1,5 @@
 import * as ynab from "ynab";
+import { TransactionSummary } from "ynab";
 
 let api: ynab.API;
 
@@ -69,7 +70,14 @@ const getMainAccounts = async (): Promise<ynab.Account[]> => {
 
 export const poflAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
-    const paidOffForLifeAccounts = mainAccounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Paid Off for Life` || a.name === `Index Budgeted`);
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Index Budgeted`);
+
+    /** DELETE LATER */
+    // const budgets = await getBudgets();
+    // const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
+    // getTransactions(mainBudget.id, paidOffForLifeAccounts[1].id);
+    /** END DELETE */
+
     return paidOffForLifeAccounts;
 };
 
@@ -146,6 +154,45 @@ const calculateSubtransactions = (amount: number, account: Account, categories: 
     return subtransactions.filter((s) => s.amount !== 0);
 };
 
+export const rules = ({ note }: { note?: string }) => {
+    const rules = (note ? note.split(`\n`) : []).filter(rule => rule.startsWith(`POFL: `));
+    const ret: {
+        inflate: boolean,
+        deflate: boolean,
+        withdrawalAmount?: number,
+        overflow: boolean,
+    } = {
+        inflate: false,
+        deflate: false,
+        overflow: false,
+    }
+
+    let setAmount;
+    for (const index in rules) {
+        const rule = rules[index];
+
+        if (rule.search("Inflate") !== -1) {
+            ret.inflate = true;
+        }
+
+        if (rule.search("Deflate") !== -1) {
+            ret.deflate = true;
+        }
+
+        if (rule.search("Overflow") !== -1) {
+            ret.overflow = true;
+        }
+
+        setAmount = setAmount ? setAmount : rule.match(/[0-9]+/);
+    }
+
+    if (setAmount) {
+        ret.withdrawalAmount = Number(setAmount) * 1000;
+    }
+
+    return ret;
+};
+
 // TODO: Break this script up and make it an interactive FE setup
 export const syncWithRealAccounts = async () => {
     const budgets = await getBudgets();
@@ -158,7 +205,7 @@ export const syncWithRealAccounts = async () => {
     const investmentBudget = budgets.data.budgets.find((b) => b.name === 'Investment Accounts');
     const investmentAccounts = await getAccounts(investmentBudget.id);
 
-    const paidOffForLifeAccounts = mainAccounts.filter((a) => !a.closed && (a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Paid Off for Life` || a.name === `Index Budgeted`));
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => !a.closed && (a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Index Budgeted`));
     const paidOffForLifeTotal = paidOffForLifeAccounts.reduce((prev, a) => prev + a.balance, 0);
     const investmentsTotal = investmentAccounts.filter((a) => a.type === ynab.Account.TypeEnum.OtherAsset).reduce((prev, a) => prev + a.balance, 0);
     let delta = investmentsTotal - paidOffForLifeTotal;
@@ -186,6 +233,118 @@ export const syncWithRealAccounts = async () => {
     if (transactions[0].subtransactions) {
         transactions[0].subtransactions[0].amount += delta;
     }
+
+    createTransactions(mainBudget.id, { transactions });
+};
+
+export const handleOverflow = async () => {
+    const budgets = await getBudgets();
+
+    // TODO: no hardcoded budget or account names
+    const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
+    const mainAccounts = (await getAccounts(mainBudget.id)).filter((a) => !a.closed && a.type === ynab.Account.TypeEnum.OtherAsset);
+
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => (
+        !a.closed
+        && a.type === ynab.Account.TypeEnum.OtherAsset
+        && rules(a).overflow
+        && !!rules(a).withdrawalAmount
+    ));
+
+    const overflowAccount = mainAccounts[0];
+
+    const transactions = paidOffForLifeAccounts.map((a): Omit<ynab.SaveTransaction, "date"> => {
+        const r = rules(a);
+
+        const excess = a.balance - r.withdrawalAmount * 300;
+        // TODO: need to look at what transfer transactions look like
+        return {
+            account_id: a.id,
+            amount: -excess,
+            payee_id: overflowAccount.transfer_payee_id,
+        }
+    }).filter((t) => t.amount < 0);
+
+    // TODO: create transactions in one lump
+    // createTransactions(mainBudget.id, { transactions });
+
+    return transactions;
+};
+
+const updateAmount = (transaction: ynab.TransactionDetail, accounts: ynab.Account[]) => {
+    const account = accounts.find((a) => a.transfer_payee_id === transaction.payee_id);
+    const r = rules(account);
+
+    const safeWithdrawal = Math.floor(account.balance / 3000) * 10;
+    let amount = transaction.amount;
+    if (r.inflate && transaction.amount < safeWithdrawal) {
+        amount = safeWithdrawal;
+    } else if (r.deflate && transaction.amount > safeWithdrawal) {
+        amount = safeWithdrawal;
+    } else if (r.withdrawalAmount) {
+        amount = r.withdrawalAmount;
+    }
+    return amount;
+};
+
+export const handleDynamicWithdrawalAmounts = async () => {
+    const budgets = await getBudgets();
+
+    // TODO: no hardcoded budget or account names
+    const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
+    const mainAccounts = (await getAccounts(mainBudget.id)).filter((a) => !a.closed && a.type === ynab.Account.TypeEnum.OtherAsset);
+
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => (
+        !a.closed
+        && a.type === ynab.Account.TypeEnum.OtherAsset
+        && (rules(a).inflate || rules(a).deflate)
+    ));
+
+    // TODO: get already existing transaction for current and next month
+    // TODO: update amount based on inflation/deflation/withdrawal amount
+    // TODO: undo hard-coded values
+    const transactions = (await api.transactions.getTransactions(mainBudget.id, "2021-03-01")).data.transactions
+        .filter((t) => paidOffForLifeAccounts.map((a) => a.transfer_payee_id).includes(t.payee_id))
+        .map((t): ynab.UpdateTransaction => ({
+            id: t.id,
+            account_id: t.account_id,
+            date: t.date,
+            amount: updateAmount(t, paidOffForLifeAccounts),
+        }));
+
+    console.log(transactions);
+
+    // TODO: create transactions in one lump
+    // createTransactions(mainBudget.id, { transactions });
+    return transactions;
+};
+
+export const updatePoflTransfers = async () => {
+    const budgets = await getBudgets();
+
+    // TODO: no hardcoded budget or account names
+    const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
+    const mainAccounts = (await getAccounts(mainBudget.id)).filter((a) => !a.closed && a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Index Budgeted`);
+
+    const paidOffForLifeAccounts = mainAccounts.filter((a) => (
+        !a.closed
+        && a.type === ynab.Account.TypeEnum.OtherAsset
+        && (rules(a).inflate || rules(a).deflate)
+    ));
+
+    const indexBudgettedAcount = mainAccounts[0];
+
+    const transactions = paidOffForLifeAccounts.map((a): Omit<ynab.SaveTransaction, "date"> => {
+        const r = rules(a);
+
+        const excess = a.balance - r.withdrawalAmount * 300;
+        // TODO: need to look at what transfer transactions look like
+        return {
+            account_id: indexBudgettedAcount.id,
+            amount: -excess,
+            payee_id: a.transfer_payee_id,
+        }
+    }).filter((t) => t.amount < 0);
 
     createTransactions(mainBudget.id, { transactions });
 };

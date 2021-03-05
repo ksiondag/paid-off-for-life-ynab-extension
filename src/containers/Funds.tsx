@@ -23,30 +23,13 @@ export default function Funds() {
     };
 
     const withdrawalAmount = (balance: number, note: string) => {
-        const rules = (note ? note.split(`\n`) : []).filter(rule => rule.startsWith(`POFL: `));
+        const rules = ynab.rules({ note });
 
-        let setAmount;
-        let inflate = false;
-        let deflate = false;
-        for (const index in rules) {
-            const rule = rules[index];
-
-            if (rule.search("Inflate") !== -1) {
-                inflate = true;
-            }
-
-            if (rule.search("Deflate") !== -1) {
-                deflate = true;
-            }
-
-            setAmount = setAmount ? setAmount : rule.match(/[0-9]+/);
-        }
-
-        if (setAmount) {
-            let newBalance = Number(setAmount) * 300000;
-            if (inflate) {
+        if (rules.withdrawalAmount) {
+            let newBalance = Number(rules.withdrawalAmount) * 300;
+            if (rules.inflate) {
                 newBalance = Math.max(newBalance, balance);
-            } else if (deflate) {
+            } else if (rules.deflate) {
                 newBalance = Math.min(newBalance, balance);
             }
             balance = newBalance;
@@ -57,7 +40,7 @@ export default function Funds() {
     return (
         <div className="Funds">
             <ButtonToolbar>
-                <Button onClick={() => ynab.syncWithRealAccounts()}>Sync with Assets</Button>
+                <Button onClick={() => ynab.handleDynamicWithdrawalAmounts()}>Testing</Button>
             </ButtonToolbar>
 
             <Table>
