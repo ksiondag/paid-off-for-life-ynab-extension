@@ -116,6 +116,11 @@ export const createTransactions = async (budget_id: string, { transactions }: { 
     localStorage.removeItem(`accounts:${budget_id}`);
 };
 
+export const patchTransactions = async (budget_id: string, { transactions }: { transactions: Array<ynab.UpdateTransaction> }) => {
+    await api.transactions.updateTransactions(budget_id, { transactions });
+    localStorage.removeItem(`accounts:${budget_id}`);
+};
+
 const getCategories = async (budget_id: string): Promise<ynab.CategoryGroupWithCategories[]> => {
     resetIfStale();
     const localCategories = localStorage.getItem(`categories:${budget_id}`)
@@ -277,12 +282,14 @@ const updateAmount = (transaction: ynab.TransactionDetail, accounts: ynab.Accoun
 
     const safeWithdrawal = Math.floor(account.balance / 3000) * 10;
     let amount = transaction.amount;
-    if (r.inflate && transaction.amount < safeWithdrawal) {
+    const choose = r.inflate ? Math.max : Math.min;
+    if (r.inflate && (transaction.amount < safeWithdrawal || r.withdrawalAmount)) {
+
         amount = safeWithdrawal;
     } else if (r.deflate && transaction.amount > safeWithdrawal) {
         amount = safeWithdrawal;
     } else if (r.withdrawalAmount) {
-        amount = r.withdrawalAmount;
+        amount = choose(r.withdrawalAmount, amount);
     }
     return amount;
 };
@@ -312,10 +319,8 @@ export const handleDynamicWithdrawalAmounts = async () => {
             amount: updateAmount(t, paidOffForLifeAccounts),
         }));
 
-    console.log(transactions);
-
     // TODO: create transactions in one lump
-    // createTransactions(mainBudget.id, { transactions });
+    patchTransactions(mainBudget.id, { transactions });
     return transactions;
 };
 
