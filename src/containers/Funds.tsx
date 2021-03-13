@@ -37,10 +37,15 @@ export default function Funds() {
         return (Math.floor(balance / 3000) / 100).toLocaleString('en', { minimumFractionDigits: 2 });
     };
 
+    const testing = () => {
+        ynab.handleOverflow();
+        ynab.handleDynamicWithdrawalAmounts();
+    }
+
     return (
         <div className="Funds">
             <ButtonToolbar>
-                <Button onClick={() => ynab.handleDynamicWithdrawalAmounts()}>Testing</Button>
+                <Button onClick={testing}>Testing</Button>
             </ButtonToolbar>
 
             <Table>

@@ -7,6 +7,8 @@ export type Account = ynab.Account;
 export type SaveTransaction = ynab.SaveTransaction;
 export type BudgetSummary = ynab.BudgetSummary;
 
+export type SaveTransactionOptionalDate = SaveTransaction | Omit<SaveTransaction, "date">;
+
 const ONE_HOUR = 1000 * 60 * 60;
 
 const resetIfStale = () => {
@@ -106,18 +108,17 @@ export const getTransactions = async (budget_id: string, account_id: string): Pr
     return transactions;
 };
 
-export const createTransactions = async (budget_id: string, { transactions }: { transactions: Array<Omit<ynab.SaveTransaction, "date"> | ynab.SaveTransaction> }) => {
+export const createTransactions = async (budget_id: string, { transactions }: { transactions: Array<SaveTransactionOptionalDate> }) => {
+    transactions = transactions.filter((t) => t.amount !== 0);
+    if (transactions.length === 0) {
+        return;
+    }
     await api.transactions.createTransactions(budget_id, {
         transactions: transactions.map((t) => ({
             date: ynab.utils.getCurrentDateInISOFormat(),
             ...t,
         }))
     });
-    localStorage.removeItem(`accounts:${budget_id}`);
-};
-
-export const patchTransactions = async (budget_id: string, { transactions }: { transactions: Array<ynab.UpdateTransaction> }) => {
-    await api.transactions.updateTransactions(budget_id, { transactions });
     localStorage.removeItem(`accounts:${budget_id}`);
 };
 
@@ -188,11 +189,11 @@ export const rules = ({ note }: { note?: string }) => {
             ret.overflow = true;
         }
 
-        setAmount = setAmount ? setAmount : rule.match(/[0-9]+/);
+        setAmount = setAmount ? setAmount : rule.match(/[0-9]+(\.[0-9]{1,2})?/);
     }
 
     if (setAmount) {
-        ret.withdrawalAmount = Number(setAmount) * 1000;
+        ret.withdrawalAmount = Number(setAmount[0]) * 1000;
     }
 
     return ret;
@@ -270,13 +271,12 @@ export const handleOverflow = async () => {
         }
     }).filter((t) => t.amount < 0);
 
+    createTransactions(mainBudget.id, { transactions });
     // TODO: create transactions in one lump
-    // createTransactions(mainBudget.id, { transactions });
-
-    return transactions;
+    // return transactions;
 };
 
-const updateAmount = (transaction: ynab.TransactionDetail, accounts: ynab.Account[]) => {
+const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.Account[]) => {
     const account = accounts.find((a) => a.transfer_payee_id === transaction.payee_id);
     const r = rules(account);
 
@@ -291,7 +291,14 @@ const updateAmount = (transaction: ynab.TransactionDetail, accounts: ynab.Accoun
     } else if (r.withdrawalAmount) {
         amount = choose(r.withdrawalAmount, amount);
     }
-    return amount;
+    return amount - transaction.amount;
+};
+
+const firstOfMonth = () => {
+    const date = new Date();
+    date.setDate(1);
+    const dateString = date.toISOString();
+    return dateString.substr(0, dateString.indexOf(`T`));
 };
 
 export const handleDynamicWithdrawalAmounts = async () => {
@@ -300,6 +307,7 @@ export const handleDynamicWithdrawalAmounts = async () => {
     // TODO: no hardcoded budget or account names
     const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
     const mainAccounts = (await getAccounts(mainBudget.id)).filter((a) => !a.closed && a.type === ynab.Account.TypeEnum.OtherAsset);
+    const indexBudgettedAcount = (await getAccounts(mainBudget.id)).filter((a) => a.name === `Index Budgeted`)[0];
 
     const paidOffForLifeAccounts = mainAccounts.filter((a) => (
         !a.closed
@@ -307,20 +315,28 @@ export const handleDynamicWithdrawalAmounts = async () => {
         && (rules(a).inflate || rules(a).deflate)
     ));
 
-    // TODO: get already existing transaction for current and next month
-    // TODO: update amount based on inflation/deflation/withdrawal amount
-    // TODO: undo hard-coded values
-    const transactions = (await api.transactions.getTransactions(mainBudget.id, "2021-03-01")).data.transactions
-        .filter((t) => paidOffForLifeAccounts.map((a) => a.transfer_payee_id).includes(t.payee_id))
-        .map((t): ynab.UpdateTransaction => ({
-            id: t.id,
-            account_id: t.account_id,
-            date: t.date,
-            amount: updateAmount(t, paidOffForLifeAccounts),
-        }));
+    const transactions = Object.values(
+        (await api.transactions.getTransactions(mainBudget.id, firstOfMonth())).data.transactions
+            .filter((t) => paidOffForLifeAccounts.map((a) => a.transfer_payee_id).includes(t.payee_id) && t.account_id === indexBudgettedAcount.id)
+            .reduce((transactionMap: { [key: string]: SaveTransactionOptionalDate }, t) => {
+                const accountTransaction = transactionMap[t.payee_id] || {
+                    account_id: t.account_id,
+                    amount: 0,
+                    category_id: t.category_id,
+                    payee_id: t.payee_id,
+                };
+
+                accountTransaction.amount += t.amount;
+                transactionMap[t.payee_id] = accountTransaction;
+                return transactionMap;
+            }, {})
+    ).map((t) => ({
+        ...t,
+        amount: updateAmount(t, paidOffForLifeAccounts),
+    })).filter((t) => t.amount !== 0);
 
     // TODO: create transactions in one lump
-    patchTransactions(mainBudget.id, { transactions });
+    createTransactions(mainBudget.id, { transactions });
     return transactions;
 };
 
