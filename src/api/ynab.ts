@@ -74,12 +74,6 @@ export const poflAccounts = async (): Promise<Array<Account>> => {
     const mainAccounts = await getMainAccounts();
     const paidOffForLifeAccounts = mainAccounts.filter((a) => (!a.closed && a.type === ynab.Account.TypeEnum.OtherAsset) || a.name === `Index Budgeted`);
 
-    /** DELETE LATER */
-    // const budgets = await getBudgets();
-    // const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
-    // getTransactions(mainBudget.id, paidOffForLifeAccounts[1].id);
-    /** END DELETE */
-
     return paidOffForLifeAccounts;
 };
 
@@ -273,7 +267,7 @@ export const handleOverflow = async () => {
 
     createTransactions(mainBudget.id, { transactions });
     // TODO: create transactions in one lump
-    // return transactions;
+    return transactions;
 };
 
 const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.Account[]) => {
@@ -296,7 +290,7 @@ const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.A
 
 const firstOfMonth = () => {
     const date = new Date();
-    date.setDate(1);
+    date.setDate(0);
     const dateString = date.toISOString();
     return dateString.substr(0, dateString.indexOf(`T`));
 };
@@ -319,7 +313,7 @@ export const handleDynamicWithdrawalAmounts = async () => {
         (await api.transactions.getTransactions(mainBudget.id, firstOfMonth())).data.transactions
             .filter((t) => paidOffForLifeAccounts.map((a) => a.transfer_payee_id).includes(t.payee_id) && t.account_id === indexBudgettedAcount.id)
             .reduce((transactionMap: { [key: string]: SaveTransactionOptionalDate }, t) => {
-                const accountTransaction = transactionMap[t.payee_id] || {
+                const accountTransaction = transactionMap[t.payee_id] ?? {
                     account_id: t.account_id,
                     amount: 0,
                     category_id: t.category_id,
@@ -338,36 +332,6 @@ export const handleDynamicWithdrawalAmounts = async () => {
     // TODO: create transactions in one lump
     createTransactions(mainBudget.id, { transactions });
     return transactions;
-};
-
-export const updatePoflTransfers = async () => {
-    const budgets = await getBudgets();
-
-    // TODO: no hardcoded budget or account names
-    const mainBudget = budgets.data.budgets.find((b) => b.name === 'My Budget');
-    const mainAccounts = (await getAccounts(mainBudget.id)).filter((a) => !a.closed && a.type === ynab.Account.TypeEnum.OtherAsset || a.name === `Index Budgeted`);
-
-    const paidOffForLifeAccounts = mainAccounts.filter((a) => (
-        !a.closed
-        && a.type === ynab.Account.TypeEnum.OtherAsset
-        && (rules(a).inflate || rules(a).deflate)
-    ));
-
-    const indexBudgettedAcount = mainAccounts[0];
-
-    const transactions = paidOffForLifeAccounts.map((a): Omit<ynab.SaveTransaction, "date"> => {
-        const r = rules(a);
-
-        const excess = a.balance - r.withdrawalAmount * 300;
-        // TODO: need to look at what transfer transactions look like
-        return {
-            account_id: indexBudgettedAcount.id,
-            amount: -excess,
-            payee_id: a.transfer_payee_id,
-        }
-    }).filter((t) => t.amount < 0);
-
-    createTransactions(mainBudget.id, { transactions });
 };
 
 export const toString = (balance: number): string => {
