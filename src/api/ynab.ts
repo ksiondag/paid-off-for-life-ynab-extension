@@ -274,7 +274,10 @@ const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.A
     const account = accounts.find((a) => a.transfer_payee_id === transaction.payee_id);
     const r = rules(account);
 
-    const safeWithdrawal = Math.floor(account.balance / 3000) * 10;
+    // Don't let what has already been withdrawn this month effect the safe withdrawal ratea
+    // This will avoid making update amount return a non-zero amount multiple times based on
+    // previous call changes to account amount
+    const safeWithdrawal = Math.floor((transaction.amount + account.balance) / 3000) * 10;
     let amount = transaction.amount;
     const choose = r.inflate ? Math.max : Math.min;
     if (r.inflate && (transaction.amount < safeWithdrawal || r.withdrawalAmount)) {
