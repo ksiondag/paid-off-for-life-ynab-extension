@@ -37,7 +37,7 @@ export default function Funds() {
         return (Math.floor(balance / 3000) / 100).toLocaleString('en', { minimumFractionDigits: 2 });
     };
 
-    const testing = () => {
+    const safeWithdrawal = () => {
         ynab.handleOverflow();
         ynab.handleDynamicWithdrawalAmounts();
     }
@@ -45,7 +45,7 @@ export default function Funds() {
     return (
         <div className="Funds">
             <ButtonToolbar>
-                <Button onClick={testing}>Testing</Button>
+                <Button onClick={safeWithdrawal}>Safe Withdrawal</Button>
             </ButtonToolbar>
 
             <Table>
