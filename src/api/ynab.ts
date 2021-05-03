@@ -161,10 +161,12 @@ export const rules = ({ note }: { note?: string }) => {
         deflate: boolean,
         withdrawalAmount?: number,
         overflow: boolean,
+        daily: boolean,
     } = {
         inflate: false,
         deflate: false,
         overflow: false,
+        daily: false,
     }
 
     let setAmount;
@@ -181,6 +183,10 @@ export const rules = ({ note }: { note?: string }) => {
 
         if (rule.search("Overflow") !== -1) {
             ret.overflow = true;
+        }
+
+        if (rule.search("Daily") !== -1) {
+            ret.daily = true;
         }
 
         setAmount = setAmount ? setAmount : rule.match(/[0-9]+(\.[0-9]{1,2})?/);
@@ -270,6 +276,12 @@ export const handleOverflow = async () => {
     return transactions;
 };
 
+const fractionOfMonthCompleted = () => {
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return now.getDate() / endOfMonth;
+};
+
 const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.Account[]) => {
     const account = accounts.find((a) => a.transfer_payee_id === transaction.payee_id);
     const r = rules(account);
@@ -277,7 +289,8 @@ const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.A
     // Don't let what has already been withdrawn this month effect the safe withdrawal ratea
     // This will avoid making update amount return a non-zero amount multiple times based on
     // previous call changes to account amount
-    const safeWithdrawal = Math.floor((transaction.amount + account.balance) / 3000) * 10;
+    const dailyMultiplier = r.daily ? fractionOfMonthCompleted() : 1;
+    const safeWithdrawal = Math.floor((transaction.amount + account.balance) * dailyMultiplier / 3000) * 10;
     let amount = transaction.amount;
     const choose = r.inflate ? Math.max : Math.min;
     if (r.inflate && (transaction.amount < safeWithdrawal || r.withdrawalAmount)) {
