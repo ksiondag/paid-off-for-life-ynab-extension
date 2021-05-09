@@ -6,6 +6,8 @@ let api: ynab.API;
 export type Account = ynab.Account;
 export type SaveTransaction = ynab.SaveTransaction;
 export type BudgetSummary = ynab.BudgetSummary;
+export type CategoryGroupWithCategories = ynab.CategoryGroupWithCategories;
+export type Category = ynab.Category;
 
 export type SaveTransactionOptionalDate = SaveTransaction | Omit<SaveTransaction, "date">;
 
@@ -116,7 +118,7 @@ export const createTransactions = async (budget_id: string, { transactions }: { 
     localStorage.removeItem(`accounts:${budget_id}`);
 };
 
-const getCategories = async (budget_id: string): Promise<ynab.CategoryGroupWithCategories[]> => {
+export const getCategories = async (budget_id: string): Promise<ynab.CategoryGroupWithCategories[]> => {
     resetIfStale();
     const localCategories = localStorage.getItem(`categories:${budget_id}`)
 

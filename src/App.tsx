@@ -32,21 +32,21 @@ function App(props: React.PropsWithChildren<RouteComponentProps>) {
             </Navbar.Header>
             <Navbar.Collapse>
                 {isAuthenticated ?
-                <Nav>
-                    <LinkContainer to="/funds">
-                        <NavItem>Funds</NavItem>
-                    </LinkContainer>
-                    <LinkContainer to="/assets">
-                        <NavItem>Assets</NavItem>
-                    </LinkContainer>
-                    <LinkContainer to="/migrate">
-                        <NavItem>Migrate</NavItem>
-                    </LinkContainer>
-                    <LinkContainer to="/playback">
-                        <NavItem>Playback</NavItem>
-                    </LinkContainer>
-                </Nav>
-                : null}
+                    <Nav>
+                        <LinkContainer to="/funds">
+                            <NavItem>Funds</NavItem>
+                        </LinkContainer>
+                        <LinkContainer to="/assets">
+                            <NavItem>Assets</NavItem>
+                        </LinkContainer>
+                        <LinkContainer to="/fidebt">
+                            <NavItem>FI Debt</NavItem>
+                        </LinkContainer>
+                        <LinkContainer to="/migrate">
+                            <NavItem>Migrate</NavItem>
+                        </LinkContainer>
+                    </Nav>
+                    : null}
                 <Nav pullRight>
                     {isAuthenticated
                         ?
