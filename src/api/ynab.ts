@@ -308,7 +308,7 @@ const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.A
 
 const firstOfMonth = () => {
     const date = new Date();
-    date.setDate(0);
+    date.setDate(1);
     const dateString = date.toISOString();
     return dateString.substr(0, dateString.indexOf(`T`));
 };
