@@ -309,8 +309,8 @@ const updateAmount = (transaction: SaveTransactionOptionalDate, accounts: ynab.A
 const firstOfMonth = () => {
     const date = new Date();
     date.setDate(1);
-    const dateString = date.toISOString();
-    return dateString.substr(0, dateString.indexOf(`T`));
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, `0`)}-${String(date.getDate()).padStart(2, `0`)}`;
+    return dateString;
 };
 
 export const handleDynamicWithdrawalAmounts = async () => {
@@ -326,6 +326,7 @@ export const handleDynamicWithdrawalAmounts = async () => {
         && a.type === ynab.Account.TypeEnum.OtherAsset
         && (rules(a).inflate || rules(a).deflate)
     ));
+    firstOfMonth();
 
     const transactions = Object.values(
         (await api.transactions.getTransactions(mainBudget.id, firstOfMonth())).data.transactions
